@@ -213,8 +213,12 @@ class AIToolAnalyzer:
                 cleaned_lines = []
                 
                 for line in lines:
-                    if 'http' in line:
+                    # URL이 포함된 줄 찾기
+                    if 'http' in line.lower():
                         url_line = line
+                        continue
+                    # 'URL' 또는 '공식' 또는 '웹사이트'가 포함된 제목줄 건너뛰기
+                    if any(keyword in line.lower() for keyword in ['url', '식', '웹사이트']):
                         continue
                     # 빈 줄이 아닌 경우에만 정제
                     if line.strip():
@@ -266,12 +270,28 @@ class AIToolAnalyzer:
                 }
             })
             
-            # 분석 내용을 블록으로 변환
+            def clean_content(text):
+                # **키워드**: 값 형식 처리
+                if '**' in text and '**: ' in text:
+                    parts = text.split('**: ')
+                    if len(parts) == 2:
+                        keyword = parts[0].replace('**', '')
+                        return f"{keyword}: {parts[1]}"
+                
+                # **키워드** 값 형식 처리
+                if text.count('**') == 2:
+                    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+                
+                return text
+
             current_text = []
             for line in analysis.split('\n'):
                 stripped_line = line.strip()
                 
-                if stripped_line.startswith('###'):
+                # 모든 라인에 대해 ** 패턴 정리
+                stripped_line = clean_content(stripped_line)
+                
+                if stripped_line.startswith('###'):  # 대제목 (heading_2)
                     if current_text:
                         blocks.append({
                             "object": "block",
@@ -289,8 +309,8 @@ class AIToolAnalyzer:
                             "rich_text": [{"type": "text", "text": {"content": stripped_line.replace('### ', '')}}]
                         }
                     })
-                elif stripped_line.startswith('**') and stripped_line.endswith('**'):
-                    if current_text:
+                elif stripped_line.startswith('-'):  # 목록 항목
+                    if current_text and not current_text[-1].startswith('-'):
                         blocks.append({
                             "object": "block",
                             "type": "paragraph",
@@ -300,11 +320,12 @@ class AIToolAnalyzer:
                         })
                         current_text = []
                     
+                    content = stripped_line.replace('- ', '')
                     blocks.append({
                         "object": "block",
-                        "type": "heading_3",
-                        "heading_3": {
-                            "rich_text": [{"type": "text", "text": {"content": stripped_line.replace('**', '')}}]
+                        "type": "bulleted_list_item",
+                        "bulleted_list_item": {
+                            "rich_text": [{"type": "text", "text": {"content": content}}]
                         }
                     })
                 else:
@@ -354,7 +375,7 @@ def main():
         tools = analyzer.get_tool_list()
         
         if not tools:
-            logging.error("도구 목록이 비어있어 분석을 진행할 수 없습니다.")
+            logging.error("도구 목록이 비어있어 분석을 행할 수 없습니다.")
             return
             
         logging.info(f"총 {len(tools)}개의 도구를 분석합니다.")
