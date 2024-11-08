@@ -10,5 +10,4 @@ services:
     volumes:
       - ./debug_output:/app/debug_output
     restart: "no"
-    shm_size: '2gb'
-    command: python ai_crawling_automation.py 
+    command: python ai_productivity_tools.py

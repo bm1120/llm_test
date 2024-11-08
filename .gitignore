@@ -1,5 +1,4 @@
-ai_crawling_automation.py
-api_key.py
 .env
 .env.local
 __pycache__/
+debug_output/
